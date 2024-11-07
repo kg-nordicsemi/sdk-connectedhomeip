@@ -25,6 +25,12 @@
 #include <hal/nrf_power.h>
 #endif
 
+#include "../../../../../nrf/samples/matter/common/src/persistent_storage/backends/persistent_storage_settings.h"
+#include "../../../../../nrf/samples/matter/common/src/persistent_storage/persistent_storage.h"
+#include "../../../../../nrf/samples/matter/common/src/persistent_storage/persistent_storage_common.h"
+
+#include <zephyr/kernel.h>
+
 namespace chip {
 namespace DeviceLayer {
 
@@ -34,10 +40,34 @@ void Reboot(SoftwareRebootReason reason)
 {
     sys_reboot(SYS_REBOOT_WARM);
 }
+Nrf::PersistentStorageNode mBootReason("bootReasonKey", strlen("bootReasonKey"));
 
 SoftwareRebootReason GetSoftwareRebootReason()
 {
-    return SoftwareRebootReason::kOther;
+    size_t bufferSize    = 1024;
+    uint8_t * dataBuffer = (uint8_t *) k_malloc(bufferSize);  // Allocate memory using Zephyr's kernel malloc
+    __ASSERT(dataBuffer != NULL, "Memory allocation failed"); // Ensure memory was allocated
+
+    SoftwareRebootReason BootReason;
+
+    size_t actualSize = 0;
+
+    // Pass the address of BootReason and use dataBuffer to get the pointer to the buffer
+    Nrf::PSErrorCode result = Nrf::GetPersistentStorage().NonSecureLoad(&mBootReason, dataBuffer, bufferSize, actualSize);
+
+    if (result == Nrf::PSErrorCode::Success && actualSize == sizeof(SoftwareRebootReason))
+    {
+        // Assuming the data read is exactly the size of SoftwareRebootReason, copy it to BootReason
+        memcpy(&BootReason, dataBuffer, sizeof(SoftwareRebootReason));
+    }
+    else
+    {
+        // Handle error or invalid size
+        // You might want to log this situation or handle it according to your application's needs
+    }
+
+    k_free(dataBuffer); // Free the memory allocated with k_malloc
+    return BootReason;
 }
 
 #else

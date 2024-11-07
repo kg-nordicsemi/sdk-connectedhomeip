@@ -46,6 +46,20 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/pm/device.h>
 
+#include "../../../../../nrf/samples/matter/common/src/persistent_storage/backends/persistent_storage_settings.h"
+#include "../../../../../nrf/samples/matter/common/src/persistent_storage/persistent_storage.h"
+#include "../../../../../nrf/samples/matter/common/src/persistent_storage/persistent_storage_common.h"
+
+namespace Nrf {
+
+Nrf::PersistentStorageNode mBootReason("bootReasonKey", strlen("bootReasonKey"));
+
+bool SaveRebootReason(chip::DeviceLayer::SoftwareRebootReason reason)
+{
+    return Nrf::GetPersistentStorage().NonSecureStore(&mBootReason, &reason, sizeof(reason));
+}
+} // namespace Nrf
+
 namespace chip {
 namespace {
 #ifdef CONFIG_CHIP_CERTIFICATION_DECLARATION_STORAGE
@@ -182,6 +196,7 @@ CHIP_ERROR OTAImageProcessorImpl::Apply()
                 PlatformMgr().HandleServerShuttingDown();
                 k_msleep(CHIP_DEVICE_CONFIG_SERVER_SHUTDOWN_ACTIONS_SLEEP_MS);
 #ifdef CONFIG_DFU_TARGET_SUIT
+                Nrf::SaveRebootReason(SoftwareRebootReason::kSoftwareUpdate);
                 dfu_target_suit_reboot();
 #else
                 Reboot(SoftwareRebootReason::kSoftwareUpdate);
