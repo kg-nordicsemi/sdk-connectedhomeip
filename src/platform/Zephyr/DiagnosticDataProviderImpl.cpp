@@ -52,6 +52,8 @@ const size_t kMaxHeapSize = CONFIG_SRAM_BASE_ADDRESS + KB(CONFIG_SRAM_SIZE) - PO
 
 #endif
 
+#include <hal/nrf_resetinfo.h>
+
 namespace chip {
 namespace DeviceLayer {
 
@@ -60,49 +62,60 @@ namespace {
 BootReasonType DetermineBootReason()
 {
 #ifdef CONFIG_HWINFO
-    uint32_t reason;
+    uint32_t raw_reason = nrf_resetinfo_resetreas_local_get(NRF_RESETINFO);
+    ChipLogDetail(DeviceLayer, "RESETINFO REASON reason: %u", raw_reason);
 
-    if (hwinfo_get_reset_cause(&reason) != 0)
+    // uint32_t reason;
+
+    // if (hwinfo_get_reset_cause(&reason) != 0)
+    // {
+    //     // return BootReasonType::kUnspecified;
+    //     ChipLogDetail(DeviceLayer, "Hwinfo reason - error: %u", reason);
+    // }
+
+    // ChipLogDetail(DeviceLayer, "Hwinfo reason: %u", reason);
+
+    if (GetSoftwareRebootReason() == SoftwareRebootReason::kSoftwareUpdate)
     {
-        return BootReasonType::kUnspecified;
+        return BootReasonType::kSoftwareUpdateCompleted;
     }
 
-    // Bits returned by hwinfo_get_reset_cause() are accumulated between subsequent resets, so
-    // the reset cause must be cleared after reading in order to make sure it always contains
-    // information about the most recent boot only.
-    (void) hwinfo_clear_reset_cause();
+    //     // Bits returned by hwinfo_get_reset_cause() are accumulated between subsequent resets, so
+    //     // the reset cause must be cleared after reading in order to make sure it always contains
+    //     // information about the most recent boot only.
+    //     (void) hwinfo_clear_reset_cause();
 
-    // If no reset cause is provided, it indicates a power-on-reset.
-    if (reason == 0 || reason & (RESET_POR | RESET_PIN))
-    {
-        return BootReasonType::kPowerOnReboot;
-    }
+    //     // If no reset cause is provided, it indicates a power-on-reset.
+    //     if (reason == 0 || reason & (RESET_POR | RESET_PIN))
+    //     {
+    //         return BootReasonType::kPowerOnReboot;
+    //     }
 
-    if (reason & RESET_WATCHDOG)
-    {
-        return BootReasonType::kHardwareWatchdogReset;
-    }
+    //     if (reason & RESET_WATCHDOG)
+    //     {
+    //         return BootReasonType::kHardwareWatchdogReset;
+    //     }
 
-    if (reason & RESET_BROWNOUT)
-    {
-        return BootReasonType::kBrownOutReset;
-    }
+    //     if (reason & RESET_BROWNOUT)
+    //     {
+    //         return BootReasonType::kBrownOutReset;
+    //     }
 
-    if (reason & RESET_SOFTWARE)
-    {
-#if CHIP_DEVICE_LAYER_TARGET_NRFCONNECT
-        if (GetSoftwareRebootReason() == SoftwareRebootReason::kSoftwareUpdate)
-        {
-            return BootReasonType::kSoftwareUpdateCompleted;
-        }
-#elif defined(CONFIG_MCUBOOT_IMG_MANAGER)
-        if (mcuboot_swap_type() == BOOT_SWAP_TYPE_REVERT)
-        {
-            return BootReasonType::kSoftwareUpdateCompleted;
-        }
-#endif
-        return BootReasonType::kSoftwareReset;
-    }
+    //     if (reason & RESET_SOFTWARE)
+    //     {
+    // #if CHIP_DEVICE_LAYER_TARGET_NRFCONNECT
+    //         if (GetSoftwareRebootReason() == SoftwareRebootReason::kSoftwareUpdate)
+    //         {
+    //             return BootReasonType::kSoftwareUpdateCompleted;
+    //         }
+    // #elif defined(CONFIG_MCUBOOT_IMG_MANAGER)
+    //         if (mcuboot_swap_type() == BOOT_SWAP_TYPE_REVERT)
+    //         {
+    //             return BootReasonType::kSoftwareUpdateCompleted;
+    //         }
+    // #endif
+    //         return BootReasonType::kSoftwareReset;
+    //     }
 #endif
 
     return BootReasonType::kUnspecified;

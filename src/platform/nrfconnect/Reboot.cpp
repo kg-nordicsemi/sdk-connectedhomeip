@@ -25,19 +25,19 @@
 #include <hal/nrf_power.h>
 #endif
 
+#if defined(CONFIG_SOC_SERIES_NRF54HX)
+#include <hal/nrf_resetinfo.h>
+#endif
+
 namespace chip {
 namespace DeviceLayer {
 
 #if defined(CONFIG_ARCH_POSIX) || defined(CONFIG_SOC_SERIES_NRF54HX)
 
-void Reboot(SoftwareRebootReason reason)
-{
-    sys_reboot(SYS_REBOOT_WARM);
-}
-
 SoftwareRebootReason GetSoftwareRebootReason()
 {
-    return SoftwareRebootReason::kOther;
+    uint32_t raw_reason = nrf_resetinfo_resetreas_local_get(NRF_RESETINFO);
+    return static_cast<SoftwareRebootReason>(raw_reason);
 }
 
 #else
